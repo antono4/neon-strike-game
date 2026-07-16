@@ -1,0 +1,19 @@
+{
+  "name": "Fruit Slash - Slice & Dice",
+  "short_name": "Fruit Slash",
+  "description": "A fun and realistic fruit slicing game",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#87CEEB",
+  "theme_color": "#FF6B35",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23FF6B35' width='512' height='512' rx='80'/><circle cx='256' cy='256' r='180' fill='%23E74C3C'/><circle cx='200' cy='200' r='40' fill='%23fff' opacity='0.4'/><path d='M100 450 Q256 300 412 450' stroke='%232ECC71' stroke-width='30' fill='none'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}

@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Fruit Slash - Slice & Dice!</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: none; }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #FFA07A 50%, #FF6B6B 100%);
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* UI Overlay */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            pointer-events: none;
+        }
+
+        .score-box, .combo-box, .lives-box {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 12px 20px;
+            text-align: center;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .hud-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.8);
+            font-weight: 600;
+        }
+
+        .hud-value {
+            font-family: 'Lilita One', cursive;
+            font-size: 32px;
+            color: #FFE66D;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            line-height: 1;
+        }
+
+        .combo-box .hud-value { color: #FF6B35; }
+        .lives-box { display: flex; gap: 8px; align-items: center; }
+        .life-heart {
+            font-size: 28px;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+            transition: all 0.3s;
+        }
+        .life-heart.lost { filter: grayscale(1); opacity: 0.3; transform: scale(0.8); }
+
+        /* Timer */
+        .timer-container {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            right: 20px;
+            height: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+        }
+        .timer-container.visible { display: block; }
+        .timer-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4ECDC4, #FFE66D);
+            border-radius: 4px;
+            transition: width 0.1s linear;
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(135,206,235,0.95) 0%, rgba(255,160,122,0.95) 50%, rgba(255,107,107,0.95) 100%);
+            z-index: 100;
+            pointer-events: auto;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+            padding: 20px;
+        }
+        .screen.hidden { opacity: 0; pointer-events: none; }
+
+        .game-title {
+            font-family: 'Lilita One', cursive;
+            font-size: clamp(48px, 12vw, 72px);
+            color: #FF6B35;
+            text-shadow: 4px 4px 0 #fff, 6px 6px 0 rgba(0,0,0,0.2);
+            margin-bottom: 10px;
+            animation: titleBounce 2s ease-in-out infinite;
+        }
+        @keyframes titleBounce {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        .game-subtitle {
+            font-size: 16px;
+            color: rgba(255,255,255,0.9);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            font-weight: 600;
+        }
+
+        .high-score {
+            font-family: 'Lilita One', cursive;
+            font-size: 20px;
+            color: #FFE66D;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        /* Menu Buttons */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 340px;
+            margin-bottom: 20px;
+        }
+
+        .menu-btn {
+            padding: 20px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu-btn .icon { font-size: 32px; }
+        .menu-btn .label { font-size: 14px; }
+
+        .btn-classic {
+            background: linear-gradient(135deg, #FF6B35, #FF8E53);
+            color: white;
+        }
+        .btn-zen {
+            background: linear-gradient(135deg, #4ECDC4, #44A08D);
+            color: white;
+        }
+        .btn-time {
+            background: linear-gradient(135deg, #FFE66D, #F7DC6F);
+            color: #333;
+        }
+        .btn-settings {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            grid-column: span 2;
+        }
+
+        .menu-btn:hover, .menu-btn:active {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 24px;
+            padding: 30px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .settings-title {
+            font-family: 'Lilita One', cursive;
+            font-size: 24px;
+            color: #FF6B35;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle {
+            width: 56px;
+            height: 30px;
+            background: #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .toggle.active { background: #4ECDC4; }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .toggle.active::after { left: 29px; }
+
+        .back-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #FF6B35, #FF8E53);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        .back-btn:hover { transform: scale(1.02); }
+
+        /* Game Over */
+        .final-score-label {
+            font-size: 16px;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 20px;
+        }
+
+        .final-score {
+            font-family: 'Lilita One', cursive;
+            font-size: clamp(60px, 18vw, 100px);
+            color: #FFE66D;
+            text-shadow: 4px 4px 0 #FF6B35, 6px 6px 0 rgba(0,0,0,0.2);
+            line-height: 1;
+        }
+
+        .new-record {
+            font-family: 'Lilita One', cursive;
+            font-size: 24px;
+            color: #FF6B35;
+            animation: pulse 0.5s infinite;
+            margin: 15px 0;
+        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 340px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Lilita One', cursive;
+            font-size: 24px;
+            color: #FF6B35;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        /* Sound Toggle */
+        .sound-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,0.3);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 200;
+            pointer-events: auto;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sound-toggle:hover { transform: scale(1.1); background: rgba(0,0,0,0.5); }
+
+        /* Instructions */
+        .instructions {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .instructions span {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            margin: 5px;
+        }
+
+        /* Combo Popup */
+        .combo-popup {
+            position: absolute;
+            font-family: 'Lilita One', cursive;
+            font-size: 48px;
+            color: #FFE66D;
+            text-shadow: 3px 3px 0 #FF6B35;
+            pointer-events: none;
+            animation: comboFloat 1s ease-out forwards;
+            z-index: 50;
+        }
+        @keyframes comboFloat {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-100px) scale(0.8); opacity: 0; }
+        }
+
+        /* Score Popup */
+        .score-popup {
+            position: absolute;
+            font-family: 'Lilita One', cursive;
+            font-size: 28px;
+            color: white;
+            text-shadow: 2px 2px 0 #FF6B35;
+            pointer-events: none;
+            animation: scoreFloat 0.8s ease-out forwards;
+            z-index: 50;
+        }
+        @keyframes scoreFloat {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-10px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(-60px); opacity: 0; }
+        }
+
+        /* Miss Indicator */
+        .miss-indicator {
+            position: absolute;
+            font-size: 40px;
+            animation: missShake 0.5s ease-out forwards;
+            z-index: 50;
+        }
+        @keyframes missShake {
+            0% { transform: translateX(0); opacity: 1; }
+            25% { transform: translateX(-20px); }
+            50% { transform: translateX(20px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); opacity: 0; }
+        }
+
+        /* Shake Effect */
+        .shake { animation: screenShake 0.3s ease-out; }
+        @keyframes screenShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 350px) {
+            .menu-grid { grid-template-columns: 1fr; }
+            .btn-settings { grid-column: span 1; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <button class="sound-toggle" id="soundToggle">🔊</button>
+
+    <!-- HUD -->
+    <div class="ui-layer" id="hud" style="display: none;">
+        <div class="hud">
+            <div class="score-box">
+                <div class="hud-label">Score</div>
+                <div class="hud-value" id="scoreDisplay">0</div>
+            </div>
+            <div class="combo-box">
+                <div class="hud-label">Combo</div>
+                <div class="hud-value" id="comboDisplay">x1</div>
+            </div>
+            <div class="lives-box" id="livesBox">
+                <span class="life-heart">❤️</span>
+                <span class="life-heart">❤️</span>
+                <span class="life-heart">❤️</span>
+            </div>
+        </div>
+        <div class="timer-container" id="timerContainer">
+            <div class="timer-bar" id="timerBar"></div>
+        </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div class="screen" id="menuScreen">
+        <div class="game-title">FRUIT SLASH</div>
+        <div class="game-subtitle">Slice & Dice</div>
+        <div class="high-score" id="highScoreDisplay">🏆 Best: 0</div>
+        
+        <div class="menu-grid">
+            <button class="menu-btn btn-classic" onclick="startGame('classic')">
+                <span class="icon">🎯</span>
+                <span class="label">Classic</span>
+            </button>
+            <button class="menu-btn btn-zen" onclick="startGame('zen')">
+                <span class="icon">🧘</span>
+                <span class="label">Zen Mode</span>
+            </button>
+            <button class="menu-btn btn-time" onclick="startGame('time')">
+                <span class="icon">⏱️</span>
+                <span class="label">Time Attack</span>
+            </button>
+            <button class="menu-btn btn-settings" onclick="showSettings()">
+                <span class="icon">⚙️</span>
+                <span class="label">Settings</span>
+            </button>
+        </div>
+
+        <div class="instructions">
+            <span>👆 Swipe to slice fruits</span>
+            <span>💣 Avoid bombs!</span>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="screen hidden" id="settingsScreen">
+        <div class="settings-panel">
+            <div class="settings-title">⚙️ Settings</div>
+            
+            <div class="setting-row">
+                <span class="setting-label">🔊 Sound Effects</span>
+                <div class="toggle active" id="soundToggleSetting" onclick="toggleSoundSetting()"></div>
+            </div>
+            
+            <div class="setting-row">
+                <span class="setting-label">🎵 Music</span>
+                <div class="toggle" id="musicToggleSetting" onclick="toggleMusicSetting()"></div>
+            </div>
+            
+            <div class="setting-row">
+                <span class="setting-label">📊 Statistics</span>
+            </div>
+            <div class="stats-grid" style="background: transparent; padding: 0; margin: 0 0 20px 0;">
+                <div class="stat-item">
+                    <div class="stat-value" id="statGames">0</div>
+                    <div class="stat-label">Games</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statBestCombo">0</div>
+                    <div class="stat-label">Best Combo</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statSliced">0</div>
+                    <div class="stat-label">Fruits Sliced</div>
+                </div>
+            </div>
+            
+            <button class="back-btn" onclick="hideSettings()">← Back to Menu</button>
+        </div>
+    </div>
+
+    <!-- Game Over -->
+    <div class="screen hidden" id="gameOverScreen">
+        <div class="final-score-label">Final Score</div>
+        <div class="final-score" id="finalScore">0</div>
+        <div class="new-record hidden" id="newRecord">★ NEW RECORD! ★</div>
+        
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="gameoverCombo">0</div>
+                <div class="stat-label">Best Combo</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="gameoverSliced">0</div>
+                <div class="stat-label">Sliced</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="gameoverAccuracy">0%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+        </div>
+
+        <button class="menu-btn btn-classic" style="width: 100%; max-width: 340px;" onclick="startGame(currentMode)">
+            <span class="icon">🔄</span>
+            <span class="label">Play Again</span>
+        </button>
+        <button class="menu-btn btn-settings" style="width: 100%; max-width: 340px; margin-top: 15px;" onclick="showMenu()">
+            <span class="icon">🏠</span>
+            <span class="label">Main Menu</span>
+        </button>
+    </div>
+
+    <script>
+        // ==================== GAME CONFIG ====================
+        const CONFIG = {
+            GRAVITY: 0.4,
+            SPAWN_INTERVAL: 800,
+            GAME_DURATION: 60000,
+            INITIAL_LIVES: 3,
+            COMBO_TIMEOUT: 1000,
+            BLADE_TRAIL_LENGTH: 20
+        };
+
+        // ==================== FRUIT TYPES ====================
+        const FRUITS = [
+            { name: 'watermelon', color: '#2ECC71', innerColor: '#E74C3C', radius: 50, points: 10, velocity: { min: 12, max: 18 } },
+            { name: 'orange', color: '#F39C12', innerColor: '#F5B041', radius: 40, points: 5, velocity: { min: 14, max: 20 } },
+            { name: 'apple', color: '#E74C3C', innerColor: '#FADBD8', radius: 35, points: 5, velocity: { min: 15, max: 22 } },
+            { name: 'banana', color: '#F1C40F', innerColor: '#FCF3CF', radius: 38, points: 8, velocity: { min: 13, max: 19 } },
+            { name: 'kiwi', color: '#8B4513', innerColor: '#2ECC71', radius: 32, points: 7, velocity: { min: 14, max: 20 } },
+            { name: 'grape', color: '#9B59B6', innerColor: '#D7BDE2', radius: 28, points: 3, velocity: { min: 16, max: 24 } },
+            { name: 'coconut', color: '#8B4513', innerColor: '#FDFEFE', radius: 45, points: 15, velocity: { min: 10, max: 15 } },
+            { name: 'pineapple', color: '#F39C12', innerColor: '#FDEBD0', radius: 48, points: 12, velocity: { min: 11, max: 16 } }
+        ];
+
+        // ==================== GAME STATE ====================
+        let canvas, ctx;
+        let gameMode = 'classic';
+        let gameState = 'menu';
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let lives = CONFIG.INITIAL_LIVES;
+        let timeLeft = CONFIG.GAME_DURATION;
+        let highScore = 0;
+        let soundEnabled = true;
+        let musicEnabled = false;
+
+        let fruits = [];
+        let particles = [];
+        let bladeTrail = [];
+        let slicedFruits = [];
+        let fruitHalves = [];
+        let juiceSplashes = [];
+
+        let isSlicing = false;
+        let lastSpawn = 0;
+        let gameStart = 0;
+        let lastSliceTime = 0;
+
+        let stats = { games: 0, bestCombo: 0, totalSliced: 0 };
+        let audioCtx = null;
+
+        // ==================== INITIALIZATION ====================
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            loadData();
+            updateHighScoreDisplay();
+            updateStatsDisplay();
+            
+            canvas.addEventListener('mousedown', handleStart);
+            canvas.addEventListener('mousemove', handleMove);
+            canvas.addEventListener('mouseup', handleEnd);
+            canvas.addEventListener('mouseleave', handleEnd);
+            
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            document.getElementById('soundToggle').addEventListener('click', toggleSound);
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function loadData() {
+            try {
+                const data = JSON.parse(localStorage.getItem('fruitSlashData')) || {};
+                highScore = data.highScore || 0;
+                stats = data.stats || stats;
+                soundEnabled = data.soundEnabled !== undefined ? data.soundEnabled : true;
+                musicEnabled = data.musicEnabled || false;
+            } catch(e) {}
+            updateSoundUI();
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('fruitSlashData', JSON.stringify({
+                    highScore, stats, soundEnabled, musicEnabled
+                }));
+            } catch(e) {}
+        }
+
+        // ==================== AUDIO ====================
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                const now = audioCtx.currentTime;
+                switch(type) {
+                    case 'slice':
+                        osc.frequency.setValueAtTime(800, now);
+                        osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                        osc.start(); osc.stop(now + 0.15);
+                        break;
+                    case 'combo':
+                        osc.frequency.setValueAtTime(600, now);
+                        osc.frequency.setValueAtTime(800, now + 0.08);
+                        osc.frequency.setValueAtTime(1000, now + 0.16);
+                        gain.gain.setValueAtTime(0.25, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                        osc.start(); osc.stop(now + 0.25);
+                        break;
+                    case 'bomb':
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(150, now);
+                        osc.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+                        gain.gain.setValueAtTime(0.4, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                        osc.start(); osc.stop(now + 0.4);
+                        break;
+                    case 'miss':
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(300, now);
+                        osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                        osc.start(); osc.stop(now + 0.2);
+                        break;
+                    case 'gameover':
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(400, now);
+                        osc.frequency.setValueAtTime(300, now + 0.2);
+                        osc.frequency.setValueAtTime(200, now + 0.4);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                        osc.start(); osc.stop(now + 0.6);
+                        break;
+                }
+            } catch(e) {}
+        }
+
+        // ==================== GAME LOGIC ====================
+        function startGame(mode) {
+            initAudio();
+            gameMode = mode;
+            gameState = 'playing';
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            lives = CONFIG.INITIAL_LIVES;
+            timeLeft = CONFIG.GAME_DURATION;
+            fruits = [];
+            particles = [];
+            bladeTrail = [];
+            slicedFruits = [];
+            fruitHalves = [];
+            juiceSplashes = [];
+            lastSpawn = 0;
+            gameStart = Date.now();
+            
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('settingsScreen').classList.add('hidden');
+            document.getElementById('hud').style.display = 'block';
+            
+            document.getElementById('timerContainer').classList.toggle('visible', mode === 'time');
+            
+            updateHUD();
+            updateLives();
+        }
+
+        function endGame() {
+            gameState = 'gameover';
+            playSound('gameover');
+            
+            stats.games++;
+            if (maxCombo > stats.bestCombo) stats.bestCombo = maxCombo;
+            
+            const isNewRecord = score > highScore;
+            if (isNewRecord) {
+                highScore = score;
+                updateHighScoreDisplay();
+            }
+            
+            saveData();
+            
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameoverCombo').textContent = 'x' + maxCombo;
+            document.getElementById('gameoverSliced').textContent = slicedFruits.length;
+            document.getElementById('gameoverAccuracy').textContent = lives > 0 ? '100%' : Math.round((slicedFruits.length / (slicedFruits.length + CONFIG.INITIAL_LIVES - lives)) * 100) + '%';
+            document.getElementById('newRecord').classList.toggle('hidden', !isNewRecord);
+            
+            setTimeout(() => {
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }, 500);
+        }
+
+        function showMenu() {
+            gameState = 'menu';
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('hud').style.display = 'none';
+            updateHighScoreDisplay();
+        }
+
+        function showSettings() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('settingsScreen').classList.remove('hidden');
+            updateStatsDisplay();
+        }
+
+        function hideSettings() {
+            document.getElementById('settingsScreen').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+        }
+
+        function spawnFruit() {
+            const type = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+            const padding = type.radius + 20;
+            const x = padding + Math.random() * (canvas.width - padding * 2);
+            
+            const velocity = type.velocity.min + Math.random() * (type.velocity.max - type.velocity.min);
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+            
+            // Special items
+            let isSpecial = false;
+            let specialType = 'normal';
+            const rand = Math.random();
+            if (rand < 0.05) {
+                isSpecial = true;
+                specialType = 'bomb';
+            } else if (rand < 0.08) {
+                isSpecial = true;
+                specialType = 'star';
+            }
+            
+            fruits.push({
+                x,
+                y: canvas.height + type.radius,
+                vx: Math.cos(angle) * velocity * 0.3,
+                vy: -velocity,
+                radius: type.radius,
+                color: type.color,
+                innerColor: type.innerColor,
+                name: type.name,
+                points: type.points,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.2,
+                sliced: false,
+                isSpecial,
+                specialType
+            });
+        }
+
+        function createJuiceSplash(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 8;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 5,
+                    radius: 3 + Math.random() * 6,
+                    color,
+                    life: 1,
+                    gravity: 0.3
+                });
+            }
+            
+            // Juice puddle
+            juiceSplashes.push({
+                x, y,
+                radius: 10,
+                maxRadius: 40 + Math.random() * 30,
+                color,
+                life: 1
+            });
+        }
+
+        function sliceFruit(fruit, sliceAngle) {
+            fruit.sliced = true;
+            slicedFruits.push(fruit);
+            stats.totalSliced++;
+            
+            // Create halves
+            const perpAngle = sliceAngle + Math.PI / 2;
+            for (let i = 0; i < 2; i++) {
+                const dir = i === 0 ? 1 : -1;
+                fruitHalves.push({
+                    x: fruit.x,
+                    y: fruit.y,
+                    vx: fruit.vx + Math.cos(perpAngle) * dir * 3,
+                    vy: fruit.vy - 2,
+                    radius: fruit.radius,
+                    color: fruit.color,
+                    innerColor: fruit.innerColor,
+                    rotation: fruit.rotation,
+                    rotationSpeed: fruit.rotationSpeed + dir * 0.1,
+                    half: i,
+                    sliceAngle,
+                    life: 1
+                });
+            }
+            
+            createJuiceSplash(fruit.x, fruit.y, fruit.innerColor);
+            
+            // Score
+            if (Date.now() - lastSliceTime < CONFIG.COMBO_TIMEOUT) {
+                combo++;
+            } else {
+                combo = 1;
+            }
+            lastSliceTime = Date.now();
+            
+            if (combo > maxCombo) maxCombo = combo;
+            
+            const multiplier = Math.min(1 + (combo - 1) * 0.2, 3);
+            const points = Math.floor(fruit.points * multiplier);
+            score += points;
+            
+            showScorePopup(fruit.x, fruit.y, points);
+            if (combo >= 3) {
+                showComboPopup(fruit.x, fruit.y, combo);
+                playSound('combo');
+            } else {
+                playSound('slice');
+            }
+            
+            updateHUD();
+        }
+
+        function handleBomb(fruit) {
+            playSound('bomb');
+            lives--;
+            updateLives();
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'miss-indicator';
+            indicator.textContent = '💥';
+            indicator.style.left = fruit.x + 'px';
+            indicator.style.top = fruit.y + 'px';
+            document.body.appendChild(indicator);
+            setTimeout(() => indicator.remove(), 500);
+            
+            document.body.classList.add('shake');
+            setTimeout(() => document.body.classList.remove('shake'), 300);
+            
+            if (lives <= 0) {
+                endGame();
+            }
+        }
+
+        // ==================== INPUT HANDLING ====================
+        let lastPoint = null;
+
+        function handleStart(e) {
+            if (gameState !== 'playing') return;
+            isSlicing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastPoint = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            bladeTrail = [{ ...lastPoint, time: Date.now() }];
+        }
+
+        function handleMove(e) {
+            if (!isSlicing || gameState !== 'playing') return;
+            const rect = canvas.getBoundingClientRect();
+            const point = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            
+            checkSlice(lastPoint, point);
+            bladeTrail.push({ ...point, time: Date.now() });
+            if (bladeTrail.length > CONFIG.BLADE_TRAIL_LENGTH) {
+                bladeTrail.shift();
+            }
+            
+            lastPoint = point;
+        }
+
+        function handleEnd() {
+            isSlicing = false;
+            lastPoint = null;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (gameState !== 'playing') return;
+            isSlicing = true;
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            lastPoint = {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+            bladeTrail = [{ ...lastPoint, time: Date.now() }];
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!isSlicing || gameState !== 'playing') return;
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const point = {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+            
+            checkSlice(lastPoint, point);
+            bladeTrail.push({ ...point, time: Date.now() });
+            if (bladeTrail.length > CONFIG.BLADE_TRAIL_LENGTH) {
+                bladeTrail.shift();
+            }
+            
+            lastPoint = point;
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            isSlicing = false;
+            lastPoint = null;
+        }
+
+        function checkSlice(from, to) {
+            if (!from || !to) return;
+            
+            const sliceAngle = Math.atan2(to.y - from.y, to.x - from.x);
+            
+            for (let i = fruits.length - 1; i >= 0; i--) {
+                const fruit = fruits[i];
+                if (fruit.sliced) continue;
+                
+                if (lineCircleIntersect(from, to, fruit)) {
+                    if (fruit.isSpecial) {
+                        if (fruit.specialType === 'bomb') {
+                            handleBomb(fruit);
+                            fruits.splice(i, 1);
+                        } else if (fruit.specialType === 'star') {
+                            score += 50;
+                            showScorePopup(fruit.x, fruit.y, 50);
+                            playSound('combo');
+                            fruits.splice(i, 1);
+                        }
+                    } else {
+                        sliceFruit(fruit, sliceAngle);
+                        fruits.splice(i, 1);
+                    }
+                    break;
+                }
+            }
+        }
+
+        function lineCircleIntersect(p1, p2, circle) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const fx = p1.x - circle.x;
+            const fy = p1.y - circle.y;
+            
+            const a = dx * dx + dy * dy;
+            const b = 2 * (fx * dx + fy * dy);
+            const c = fx * fx + fy * fy - circle.radius * circle.radius;
+            
+            let discriminant = b * b - 4 * a * c;
+            if (discriminant < 0) return false;
+            
+            discriminant = Math.sqrt(discriminant);
+            const t1 = (-b - discriminant) / (2 * a);
+            const t2 = (-b + discriminant) / (2 * a);
+            
+            return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
+        }
+
+        // ==================== UI UPDATES ====================
+        function updateHUD() {
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('comboDisplay').textContent = 'x' + combo;
+        }
+
+        function updateLives() {
+            const hearts = document.querySelectorAll('.life-heart');
+            hearts.forEach((heart, i) => {
+                heart.classList.toggle('lost', i >= lives);
+            });
+        }
+
+        function updateHighScoreDisplay() {
+            document.getElementById('highScoreDisplay').textContent = `🏆 Best: ${highScore}`;
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('statGames').textContent = stats.games;
+            document.getElementById('statBestCombo').textContent = 'x' + stats.bestCombo;
+            document.getElementById('statSliced').textContent = stats.totalSliced;
+        }
+
+        function showScorePopup(x, y, points) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = '+' + points;
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 800);
+        }
+
+        function showComboPopup(x, y, combo) {
+            const popup = document.createElement('div');
+            popup.className = 'combo-popup';
+            popup.textContent = combo + 'x COMBO!';
+            popup.style.left = x + 'px';
+            popup.style.top = (y - 50) + 'px';
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            updateSoundUI();
+            saveData();
+            if (soundEnabled) initAudio();
+        }
+
+        function toggleSoundSetting() {
+            soundEnabled = !soundEnabled;
+            updateSoundUI();
+            saveData();
+            if (soundEnabled) initAudio();
+        }
+
+        function toggleMusicSetting() {
+            musicEnabled = !musicEnabled;
+            document.getElementById('musicToggleSetting').classList.toggle('active', musicEnabled);
+            saveData();
+        }
+
+        function updateSoundUI() {
+            document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+            document.getElementById('soundToggleSetting').classList.toggle('active', soundEnabled);
+        }
+
+        // ==================== GAME LOOP ====================
+        function gameLoop() {
+            const now = Date.now();
+            
+            if (gameState === 'playing') {
+                // Spawn fruits
+                if (now - lastSpawn > CONFIG.SPAWN_INTERVAL) {
+                    spawnFruit();
+                    lastSpawn = now;
+                }
+                
+                // Update timer
+                if (gameMode === 'time') {
+                    timeLeft = Math.max(0, CONFIG.GAME_DURATION - (now - gameStart));
+                    document.getElementById('timerBar').style.width = (timeLeft / CONFIG.GAME_DURATION * 100) + '%';
+                    if (timeLeft <= 0) {
+                        endGame();
+                    }
+                }
+                
+                // Combo timeout
+                if (combo > 0 && now - lastSliceTime > CONFIG.COMBO_TIMEOUT) {
+                    combo = 0;
+                    updateHUD();
+                }
+                
+                // Update fruits
+                for (let i = fruits.length - 1; i >= 0; i--) {
+                    const fruit = fruits[i];
+                    fruit.vy += CONFIG.GRAVITY;
+                    fruit.x += fruit.vx;
+                    fruit.y += fruit.vy;
+                    fruit.rotation += fruit.rotationSpeed;
+                    
+                    // Check if missed (fell below screen)
+                    if (fruit.y > canvas.height + fruit.radius * 2) {
+                        if (!fruit.isSpecial && !fruit.sliced) {
+                            if (gameMode === 'classic') {
+                                lives--;
+                                updateLives();
+                                playSound('miss');
+                                if (lives <= 0) {
+                                    endGame();
+                                }
+                            }
+                        }
+                        fruits.splice(i, 1);
+                    }
+                }
+                
+                // Clean old blade trail
+                bladeTrail = bladeTrail.filter(p => now - p.time < 100);
+            }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.gravity || 0;
+                p.life -= 0.02;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            
+            // Update fruit halves
+            for (let i = fruitHalves.length - 1; i >= 0; i--) {
+                const half = fruitHalves[i];
+                half.vy += CONFIG.GRAVITY;
+                half.x += half.vx;
+                half.y += half.vy;
+                half.rotation += half.rotationSpeed;
+                half.life -= 0.01;
+                if (half.life <= 0 || half.y > canvas.height + 100) {
+                    fruitHalves.splice(i, 1);
+                }
+            }
+            
+            // Update juice splashes
+            for (let i = juiceSplashes.length - 1; i >= 0; i--) {
+                const splash = juiceSplashes[i];
+                splash.radius += (splash.maxRadius - splash.radius) * 0.1;
+                splash.life -= 0.015;
+                if (splash.life <= 0) juiceSplashes.splice(i, 1);
+            }
+            
+            // Render
+            render();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==================== RENDERING ====================
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background gradient
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#87CEEB');
+            bgGrad.addColorStop(0.5, '#FFA07A');
+            bgGrad.addColorStop(1, '#FF6B6B');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw clouds
+            drawClouds();
+            
+            // Draw juice splashes
+            juiceSplashes.forEach(splash => {
+                ctx.beginPath();
+                ctx.arc(splash.x, splash.y, splash.radius, 0, Math.PI * 2);
+                ctx.fillStyle = splash.color + Math.floor(splash.life * 50).toString(16).padStart(2, '0');
+                ctx.fill();
+            });
+            
+            // Draw fruits
+            fruits.forEach(fruit => {
+                if (!fruit.sliced) {
+                    drawFruit(fruit);
+                }
+            });
+            
+            // Draw fruit halves
+            fruitHalves.forEach(half => {
+                drawFruitHalf(half);
+            });
+            
+            // Draw particles
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+            
+            // Draw blade trail
+            if (bladeTrail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
+                
+                for (let i = 1; i < bladeTrail.length; i++) {
+                    const p = bladeTrail[i];
+                    const prev = bladeTrail[i - 1];
+                    const midX = (prev.x + p.x) / 2;
+                    const midY = (prev.y + p.y) / 2;
+                    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+                }
+                
+                ctx.lineWidth = 8;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                const trailGrad = ctx.createLinearGradient(
+                    bladeTrail[0].x, bladeTrail[0].y,
+                    bladeTrail[bladeTrail.length - 1].x, bladeTrail[bladeTrail.length - 1].y
+                );
+                trailGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                trailGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+                trailGrad.addColorStop(1, 'rgba(255, 255, 255, 1)');
+                
+                ctx.strokeStyle = trailGrad;
+                ctx.stroke();
+                
+                // Glow effect
+                ctx.lineWidth = 15;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.stroke();
+            }
+        }
+
+        function drawClouds() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            const time = Date.now() * 0.0001;
+            
+            for (let i = 0; i < 5; i++) {
+                const x = ((time + i * 0.5) % 2) * canvas.width;
+                const y = 50 + i * 40;
+                drawCloud(x, y, 30 + i * 10);
+            }
+        }
+
+        function drawCloud(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.8, y - size * 0.2, size * 0.7, 0, Math.PI * 2);
+            ctx.arc(x + size * 1.5, y, size * 0.8, 0, Math.PI * 2);
+            ctx.arc(x - size * 0.6, y + size * 0.1, size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawFruit(fruit) {
+            ctx.save();
+            ctx.translate(fruit.x, fruit.y);
+            ctx.rotate(fruit.rotation);
+            
+            // Shadow
+            ctx.beginPath();
+            ctx.arc(3, 3, fruit.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fill();
+            
+            // Main fruit body with gradient
+            const grad = ctx.createRadialGradient(
+                -fruit.radius * 0.3, -fruit.radius * 0.3, 0,
+                0, 0, fruit.radius
+            );
+            grad.addColorStop(0, lightenColor(fruit.color, 30));
+            grad.addColorStop(0.7, fruit.color);
+            grad.addColorStop(1, darkenColor(fruit.color, 20));
+            
+            ctx.beginPath();
+            ctx.arc(0, 0, fruit.radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            
+            // Highlight
+            ctx.beginPath();
+            ctx.arc(-fruit.radius * 0.3, -fruit.radius * 0.3, fruit.radius * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fill();
+            
+            // Special items
+            if (fruit.isSpecial) {
+                if (fruit.specialType === 'bomb') {
+                    // Bomb icon
+                    ctx.font = `${fruit.radius}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('💣', 0, 0);
+                } else if (fruit.specialType === 'star') {
+                    // Star icon
+                    ctx.font = `${fruit.radius}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('⭐', 0, 0);
+                }
+            }
+            
+            ctx.restore();
+        }
+
+        function drawFruitHalf(half) {
+            ctx.save();
+            ctx.translate(half.x, half.y);
+            ctx.rotate(half.rotation);
+            ctx.globalAlpha = half.life;
+            
+            ctx.beginPath();
+            if (half.half === 0) {
+                ctx.arc(0, 0, half.radius, -Math.PI / 2, Math.PI / 2);
+            } else {
+                ctx.arc(0, 0, half.radius, Math.PI / 2, -Math.PI / 2);
+            }
+            ctx.closePath();
+            
+            // Outer skin
+            ctx.fillStyle = half.color;
+            ctx.fill();
+            
+            // Inner flesh
+            ctx.beginPath();
+            if (half.half === 0) {
+                ctx.arc(0, 0, half.radius * 0.85, -Math.PI / 2, Math.PI / 2);
+            } else {
+                ctx.arc(0, 0, half.radius * 0.85, Math.PI / 2, -Math.PI / 2);
+            }
+            ctx.closePath();
+            ctx.fillStyle = half.innerColor;
+            ctx.fill();
+            
+            // Seeds/details for watermelon
+            if (half.name === 'watermelon') {
+                ctx.fillStyle = '#333';
+                for (let i = 0; i < 5; i++) {
+                    const angle = (half.half === 0 ? 0 : Math.PI) + (Math.random() - 0.5) * Math.PI * 0.6;
+                    const dist = Math.random() * half.radius * 0.5;
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        Math.cos(angle) * dist,
+                        Math.sin(angle) * dist,
+                        3, 5, angle, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+            }
+            
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+
+        function lightenColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, (num >> 16) + amt);
+            const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
+            const B = Math.min(255, (num & 0x0000FF) + amt);
+            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        function darkenColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max(0, (num >> 16) - amt);
+            const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+            const B = Math.max(0, (num & 0x0000FF) - amt);
+            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        // ==================== START ====================
+        init();
+    </script>
+</body>
+</html>
