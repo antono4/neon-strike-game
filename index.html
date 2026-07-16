@@ -616,6 +616,11 @@
         let highScore = 0;
         let soundEnabled = true;
         let musicEnabled = false;
+        
+        // Background image
+        let backgroundImage = new Image();
+        let backgroundLoaded = false;
+        const BACKGROUND_URL = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80';
 
         let fruits = [];
         let particles = [];
@@ -638,6 +643,16 @@
             ctx = canvas.getContext('2d');
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+            
+            // Load background image
+            backgroundImage.onload = function() {
+                backgroundLoaded = true;
+            };
+            backgroundImage.onerror = function() {
+                console.log('Background image failed to load, using fallback');
+                backgroundLoaded = false;
+            };
+            backgroundImage.src = BACKGROUND_URL;
             
             loadData();
             updateHighScoreDisplay();
@@ -1337,60 +1352,44 @@
         }
 
         function drawRealisticBackground() {
-            const time = Date.now();
             const h = canvas.height;
             const w = canvas.width;
             
-            // Night sky gradient (dark cyberpunk)
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-            skyGrad.addColorStop(0, '#0a0a15'); // Very dark blue top
-            skyGrad.addColorStop(0.3, '#0f0f25'); // Dark blue
-            skyGrad.addColorStop(0.5, '#1a1035'); // Purple tint
-            skyGrad.addColorStop(0.7, '#15102a'); // Dark purple
-            skyGrad.addColorStop(1, '#0a0812'); // Almost black at horizon
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, w, h);
-            
-            // Stars
-            drawStars(time, w, h);
-            
-            // Moon with glow
-            const moonX = w * 0.8;
-            const moonY = h * 0.15;
-            const moonRadius = Math.min(w, h) * 0.06;
-            
-            // Moon glow
-            const moonGlow = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moonRadius * 4);
-            moonGlow.addColorStop(0, 'rgba(100, 200, 255, 0.3)');
-            moonGlow.addColorStop(0.5, 'rgba(80, 150, 255, 0.1)');
-            moonGlow.addColorStop(1, 'transparent');
-            ctx.fillStyle = moonGlow;
-            ctx.fillRect(0, 0, w, h);
-            
-            // Moon body
-            ctx.beginPath();
-            ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
-            ctx.fillStyle = '#e8f4ff';
-            ctx.fill();
-            
-            // City skyline (far buildings)
-            drawCitySkyline(h, w, 0.55, '#0a0a18', 0.6);
-            
-            // City skyline (near buildings)
-            drawCitySkyline(h, w, 0.70, '#050510', 0.8);
-            
-            // Neon signs and lights on buildings
-            drawNeonLights(time, w, h);
-            
-            // Ground/street
-            const groundGrad = ctx.createLinearGradient(0, h * 0.85, 0, h);
-            groundGrad.addColorStop(0, '#0a0a12');
-            groundGrad.addColorStop(1, '#030308');
-            ctx.fillStyle = groundGrad;
-            ctx.fillRect(0, h * 0.85, w, h * 0.15);
-            
-            // Street reflection/shine
-            drawStreetLights(time, w, h);
+            // Draw background image if loaded
+            if (backgroundLoaded && backgroundImage.complete) {
+                // Cover entire canvas with image
+                const imgRatio = backgroundImage.width / backgroundImage.height;
+                const canvasRatio = w / h;
+                
+                let drawWidth, drawHeight, drawX, drawY;
+                
+                if (canvasRatio > imgRatio) {
+                    // Canvas is wider than image ratio - crop sides
+                    drawHeight = h;
+                    drawWidth = h * imgRatio;
+                    drawX = (w - drawWidth) / 2;
+                    drawY = 0;
+                } else {
+                    // Canvas is taller than image ratio - crop top/bottom
+                    drawWidth = w;
+                    drawHeight = w / imgRatio;
+                    drawX = 0;
+                    drawY = (h - drawHeight) / 2;
+                }
+                
+                ctx.drawImage(backgroundImage, drawX, drawY, drawWidth, drawHeight);
+                
+                // Add dark overlay for better fruit visibility
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(0, 0, w, h);
+            } else {
+                // Fallback: dark gradient
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+                skyGrad.addColorStop(0, '#1a1a2e');
+                skyGrad.addColorStop(1, '#16213e');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h);
+            }
         }
 
         function drawStars(time, w, h) {
