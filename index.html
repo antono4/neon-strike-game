@@ -1530,23 +1530,36 @@
             ctx.rotate(fruit.rotation);
             ctx.scale(fruit.scale || 1, fruit.scale || 1);
             
+            const radius = fruit.radius;
+            
+            // Solid background circle
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFD700'; // Gold color for fruit background
+            ctx.fill();
+            
+            // Border
+            ctx.strokeStyle = '#FF8C00'; // Darker orange border
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
             // Shadow
-            ctx.shadowColor = 'rgba(0,0,0,0.4)';
-            ctx.shadowBlur = 20;
-            ctx.shadowOffsetX = 6;
-            ctx.shadowOffsetY = 6;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 4;
+            ctx.shadowOffsetY = 4;
             
             // Draw emoji as fruit image
-            const fontSize = fruit.radius * 1.8;
+            const fontSize = radius * 1.4;
             ctx.font = `${fontSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
-            // Glow effect
-            ctx.shadowColor = 'rgba(255,255,255,0.6)';
-            ctx.shadowBlur = 15;
+            // Strong solid text
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 5;
             
-            ctx.fillText(fruit.emoji, 0, 0);
+            ctx.fillText(fruit.emoji, 0, 2);
             
             ctx.restore();
         }
