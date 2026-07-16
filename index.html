@@ -1352,234 +1352,157 @@
         }
 
         function drawRealisticBackground() {
+            const time = Date.now();
             const h = canvas.height;
             const w = canvas.width;
             
             // Draw background image if loaded
             if (backgroundLoaded && backgroundImage.complete) {
-                // Cover entire canvas with image
+                // Cover entire canvas with image (crop as needed)
                 const imgRatio = backgroundImage.width / backgroundImage.height;
                 const canvasRatio = w / h;
                 
                 let drawWidth, drawHeight, drawX, drawY;
                 
                 if (canvasRatio > imgRatio) {
-                    // Canvas is wider than image ratio - crop sides
-                    drawHeight = h;
-                    drawWidth = h * imgRatio;
-                    drawX = (w - drawWidth) / 2;
-                    drawY = 0;
-                } else {
-                    // Canvas is taller than image ratio - crop top/bottom
+                    // Canvas is wider than image - make image taller to cover
                     drawWidth = w;
                     drawHeight = w / imgRatio;
                     drawX = 0;
-                    drawY = (h - drawHeight) / 2;
+                    drawY = (h - drawHeight) / 2; // Center vertically (crop top/bottom)
+                } else {
+                    // Canvas is taller than image - make image wider to cover
+                    drawHeight = h;
+                    drawWidth = h * imgRatio;
+                    drawX = (w - drawWidth) / 2; // Center horizontally (crop sides)
+                    drawY = 0;
                 }
                 
                 ctx.drawImage(backgroundImage, drawX, drawY, drawWidth, drawHeight);
                 
                 // Add dark overlay for better fruit visibility
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
                 ctx.fillRect(0, 0, w, h);
             } else {
-                // Fallback: dark gradient
-                const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-                skyGrad.addColorStop(0, '#1a1a2e');
-                skyGrad.addColorStop(1, '#16213e');
-                ctx.fillStyle = skyGrad;
-                ctx.fillRect(0, 0, w, h);
+                // Fallback: original procedural sunset background
+                drawSunsetBackground(time, w, h);
             }
         }
-
-        function drawStars(time, w, h) {
-            // Use seeded random for consistent star positions
-            const starCount = 80;
+        
+        function drawSunsetBackground(time, w, h) {
+            // Sky gradient (sunset/golden hour)
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+            skyGrad.addColorStop(0, '#1a1a3e');
+            skyGrad.addColorStop(0.2, '#4a3f6b');
+            skyGrad.addColorStop(0.4, '#e85d75');
+            skyGrad.addColorStop(0.5, '#ff8c42');
+            skyGrad.addColorStop(0.6, '#ffc857');
+            skyGrad.addColorStop(0.75, '#ffd89b');
+            skyGrad.addColorStop(1, '#fff5e6');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h);
             
-            for (let i = 0; i < starCount; i++) {
-                // Pseudo-random position based on index
-                const seed = i * 9301 + 49297;
-                const x = (seed % w);
-                const y = ((seed * 31) % (h * 0.5));
-                const size = ((seed * 7) % 3) + 1;
-                
-                // Twinkling effect
-                const twinkle = Math.sin(time * 0.002 + i * 0.5) * 0.3 + 0.7;
-                
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.8})`;
-                ctx.fill();
-            }
+            // Sun
+            const sunX = w * 0.7;
+            const sunY = h * 0.55;
+            const sunRadius = Math.min(w, h) * 0.12;
             
-            // Add some colored stars (cyan and magenta)
-            for (let i = 0; i < 10; i++) {
-                const seed = i * 1234 + 5678;
-                const x = (seed % w);
-                const y = ((seed * 17) % (h * 0.4));
-                const twinkle = Math.sin(time * 0.003 + i) * 0.4 + 0.6;
-                const color = i % 2 === 0 ? 'rgba(0, 255, 255,' : 'rgba(255, 0, 255,';
-                
-                ctx.beginPath();
-                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = `${color} ${twinkle * 0.6})`;
-                ctx.fill();
-            }
+            // Sun glow
+            const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 3);
+            sunGlow.addColorStop(0, 'rgba(255, 200, 100, 0.8)');
+            sunGlow.addColorStop(0.3, 'rgba(255, 150, 50, 0.4)');
+            sunGlow.addColorStop(0.6, 'rgba(255, 100, 50, 0.1)');
+            sunGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = sunGlow;
+            ctx.fillRect(0, 0, w, h);
+            
+            // Sun body
+            const sunBody = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius);
+            sunBody.addColorStop(0, '#fffef0');
+            sunBody.addColorStop(0.7, '#ffdd66');
+            sunBody.addColorStop(1, '#ffaa33');
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+            ctx.fillStyle = sunBody;
+            ctx.fill();
+            
+            // Far mountains (purple/misty)
+            drawMountains(h * 0.5, h * 0.7, '#3d2852', '#2a1a3d', 0.4);
+            
+            // Mid mountains (darker)
+            drawMountains(h * 0.6, h * 0.8, '#1a1025', '#0d0812', 0.6);
+            
+            // Near hills (dark silhouette)
+            drawHills(h * 0.75, h, '#0a0510', '#050208', 0.8);
+            
+            // Ground
+            const groundGrad = ctx.createLinearGradient(0, h * 0.85, 0, h);
+            groundGrad.addColorStop(0, '#1a0f1a');
+            groundGrad.addColorStop(1, '#0a0508');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, h * 0.85, w, h * 0.15);
         }
-
-        function drawCitySkyline(h, w, startYRatio, color, opacity) {
-            ctx.fillStyle = color;
+        
+        function drawMountains(baseY, topY, lightColor, darkColor, opacity) {
+            ctx.fillStyle = darkColor;
             ctx.globalAlpha = opacity;
+            ctx.beginPath();
+            ctx.moveTo(0, h);
             
-            const startY = h * startYRatio;
-            const buildingCount = 15;
-            const buildingWidth = w / buildingCount;
+            const peaks = 8;
+            const w = canvas.width;
+            const h = canvas.height;
             
-            for (let i = 0; i < buildingCount; i++) {
-                const seed = i * 1234;
-                const buildingHeight = 30 + (seed % 80);
-                const x = i * buildingWidth;
-                const buildingTop = startY - buildingHeight;
-                
-                // Main building
-                ctx.fillRect(x + 2, buildingTop, buildingWidth - 4, h - buildingTop);
-                
-                // Add some rooftop details
-                if (seed % 3 === 0) {
-                    // Antenna
-                    ctx.fillRect(x + buildingWidth / 2 - 1, buildingTop - 15, 2, 15);
-                    // Blinking light on antenna
-                    if (Math.floor(Date.now() / 500) % 2 === 0) {
-                        ctx.beginPath();
-                        ctx.arc(x + buildingWidth / 2, buildingTop - 15, 3, 0, Math.PI * 2);
-                        ctx.fillStyle = '#ff0044';
-                        ctx.fill();
-                    }
+            for (let i = 0; i <= peaks; i++) {
+                const px = (i / peaks) * w;
+                const peakHeight = baseY - Math.sin(i * 1.5) * (baseY - topY) * 0.8;
+                if (i === 0 || i === peaks) {
+                    ctx.lineTo(px, peakHeight);
+                } else {
+                    const variation = Math.sin(i * 2.3) * 0.3 + Math.cos(i * 1.7) * 0.2;
+                    const midY = (peakHeight + baseY) / 2 + variation * (baseY - topY);
+                    ctx.quadraticCurveTo(px - w / peaks / 2, midY, px, peakHeight);
                 }
-                
-                // Water tower
-                if (seed % 5 === 0) {
-                    ctx.fillRect(x + buildingWidth * 0.6, buildingTop - 20, 10, 20);
+            }
+            
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            // Snow caps
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 1; i < peaks; i++) {
+                const px = (i / peaks) * w;
+                const peakHeight = baseY - Math.sin(i * 1.5) * (baseY - topY) * 0.8;
+                if (peakHeight < topY + (baseY - topY) * 0.3) {
                     ctx.beginPath();
-                    ctx.arc(x + buildingWidth * 0.65 + 5, buildingTop - 20, 7, Math.PI, 0);
+                    ctx.moveTo(px - 15, peakHeight);
+                    ctx.lineTo(px, peakHeight - 25);
+                    ctx.lineTo(px + 15, peakHeight);
                     ctx.fill();
                 }
             }
-            
-            ctx.globalAlpha = 1;
         }
-
-        function drawNeonLights(time, w, h) {
-            const neonColors = [
-                '#ff00ff', // Magenta
-                '#00ffff', // Cyan
-                '#ff3366', // Pink
-                '#00ff66', // Green
-                '#ff6600', // Orange
-                '#6600ff', // Purple
-            ];
+        
+        function drawHills(baseY, bottomY, lightColor, darkColor, opacity) {
+            const w = canvas.width;
+            const h = canvas.height;
             
-            // Window lights
-            for (let i = 0; i < 40; i++) {
-                const seed = i * 7890;
-                const x = (seed % w);
-                const y = h * 0.5 + (seed % (h * 0.35));
-                const windowWidth = 8;
-                const windowHeight = 12;
-                const colorIndex = (seed * 3) % neonColors.length;
-                const flicker = Math.sin(time * 0.01 + i) > -0.9 ? 1 : 0.3;
-                
-                ctx.fillStyle = neonColors[colorIndex];
-                ctx.globalAlpha = 0.4 * flicker + 0.2;
-                ctx.fillRect(x, y, windowWidth, windowHeight);
+            ctx.fillStyle = darkColor;
+            ctx.globalAlpha = opacity;
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            
+            for (let x = 0; x <= w; x += 5) {
+                const y = baseY + Math.sin(x * 0.01) * 30 + Math.sin(x * 0.02) * 15 + Math.sin(x * 0.005) * 40;
+                ctx.lineTo(x, y);
             }
+            
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
             ctx.globalAlpha = 1;
-            
-            // Neon signs
-            const signPositions = [
-                { x: w * 0.15, y: h * 0.62, text: 'NEON', color: '#ff00ff' },
-                { x: w * 0.45, y: h * 0.68, text: 'STRIKE', color: '#00ffff' },
-                { x: w * 0.75, y: h * 0.58, text: 'GAME', color: '#ff3366' },
-            ];
-            
-            signPositions.forEach((sign, index) => {
-                const flicker = Math.sin(time * 0.008 + index * 2) * 0.15 + 0.85;
-                const glowSize = Math.sin(time * 0.005 + index) * 5 + 15;
-                
-                // Neon glow
-                ctx.shadowColor = sign.color;
-                ctx.shadowBlur = glowSize * flicker;
-                ctx.fillStyle = sign.color;
-                ctx.font = `bold ${Math.floor(w * 0.04)}px Arial`;
-                ctx.fillText(sign.text, sign.x, sign.y);
-                
-                // Double glow for stronger effect
-                ctx.shadowBlur = glowSize * 2 * flicker;
-                ctx.fillText(sign.text, sign.x, sign.y);
-                
-                ctx.shadowBlur = 0;
-            });
-            
-            // Flying cars/lights streaks
-            for (let i = 0; i < 5; i++) {
-                const baseX = ((time * 0.05 + i * 200) % (w + 100)) - 50;
-                const baseY = h * 0.3 + Math.sin(i * 1.5) * h * 0.1;
-                const streakLength = 50;
-                
-                ctx.strokeStyle = i % 2 === 0 ? '#00ffff' : '#ff00ff';
-                ctx.lineWidth = 2;
-                ctx.globalAlpha = 0.6;
-                ctx.beginPath();
-                ctx.moveTo(baseX, baseY);
-                ctx.lineTo(baseX + streakLength, baseY);
-                ctx.stroke();
-                
-                // Light head
-                ctx.beginPath();
-                ctx.arc(baseX + streakLength, baseY, 3, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
-        }
-
-        function drawStreetLights(time, w, h) {
-            // Street light poles
-            const poleSpacing = w / 6;
-            const groundY = h * 0.85;
-            
-            for (let i = 1; i < 6; i++) {
-                const x = i * poleSpacing;
-                
-                // Pole
-                ctx.fillStyle = '#1a1a25';
-                ctx.fillRect(x - 3, groundY - 60, 6, 60);
-                
-                // Light arm
-                ctx.fillRect(x - 20, groundY - 65, 40, 4);
-                
-                // Light bulb glow
-                const glowSize = Math.sin(time * 0.003 + i) * 10 + 40;
-                const lightGlow = ctx.createRadialGradient(x, groundY - 63, 0, x, groundY - 63, glowSize);
-                lightGlow.addColorStop(0, 'rgba(255, 200, 100, 0.4)');
-                lightGlow.addColorStop(0.5, 'rgba(255, 150, 50, 0.1)');
-                lightGlow.addColorStop(1, 'transparent');
-                ctx.fillStyle = lightGlow;
-                ctx.fillRect(x - glowSize, groundY - 63 - glowSize, glowSize * 2, glowSize * 2);
-                
-                // Light bulb
-                ctx.beginPath();
-                ctx.arc(x, groundY - 63, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffdd88';
-                ctx.fill();
-            }
-            
-            // Street reflection (wet road effect)
-            const reflectionGrad = ctx.createLinearGradient(0, groundY, 0, h);
-            reflectionGrad.addColorStop(0, 'rgba(50, 50, 80, 0.3)');
-            reflectionGrad.addColorStop(1, 'rgba(20, 20, 40, 0.5)');
-            ctx.fillStyle = reflectionGrad;
-            ctx.fillRect(0, groundY, w, h - groundY);
         }
 
         function drawFruit(fruit) {
