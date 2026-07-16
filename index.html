@@ -585,16 +585,23 @@
             BLADE_TRAIL_LENGTH: 20
         };
 
-        // ==================== FRUIT TYPES ====================
+        // ==================== FRUIT TYPES WITH REAL IMAGES ====================
         const FRUITS = [
-            { name: 'watermelon', color: '#2ECC71', innerColor: '#E74C3C', radius: 50, points: 10, velocity: { min: 12, max: 18 } },
-            { name: 'orange', color: '#F39C12', innerColor: '#F5B041', radius: 40, points: 5, velocity: { min: 14, max: 20 } },
-            { name: 'apple', color: '#E74C3C', innerColor: '#FADBD8', radius: 35, points: 5, velocity: { min: 15, max: 22 } },
-            { name: 'banana', color: '#F1C40F', innerColor: '#FCF3CF', radius: 38, points: 8, velocity: { min: 13, max: 19 } },
-            { name: 'kiwi', color: '#8B4513', innerColor: '#2ECC71', radius: 32, points: 7, velocity: { min: 14, max: 20 } },
-            { name: 'grape', color: '#9B59B6', innerColor: '#D7BDE2', radius: 28, points: 3, velocity: { min: 16, max: 24 } },
-            { name: 'coconut', color: '#8B4513', innerColor: '#FDFEFE', radius: 45, points: 15, velocity: { min: 10, max: 15 } },
-            { name: 'pineapple', color: '#F39C12', innerColor: '#FDEBD0', radius: 48, points: 12, velocity: { min: 11, max: 16 } }
+            { name: 'watermelon', emoji: '🍉', radius: 55, points: 10, velocity: { min: 12, max: 17 } },
+            { name: 'orange', emoji: '🍊', radius: 45, points: 5, velocity: { min: 14, max: 20 } },
+            { name: 'apple', emoji: '🍎', radius: 40, points: 5, velocity: { min: 15, max: 22 } },
+            { name: 'apple_red', emoji: '🍏', radius: 40, points: 5, velocity: { min: 15, max: 22 } },
+            { name: 'banana', emoji: '🍌', radius: 42, points: 8, velocity: { min: 13, max: 19 } },
+            { name: 'grapes', emoji: '🍇', radius: 38, points: 3, velocity: { min: 16, max: 22 } },
+            { name: 'strawberry', emoji: '🍓', radius: 35, points: 6, velocity: { min: 14, max: 20 } },
+            { name: 'cherries', emoji: '🍒', radius: 36, points: 7, velocity: { min: 14, max: 21 } },
+            { name: 'peach', emoji: '🍑', radius: 42, points: 6, velocity: { min: 13, max: 19 } },
+            { name: 'pineapple', emoji: '🍍', radius: 50, points: 12, velocity: { min: 11, max: 16 } },
+            { name: 'lemon', emoji: '🍋', radius: 38, points: 5, velocity: { min: 14, max: 20 } },
+            { name: 'coconut', emoji: '🥥', radius: 45, points: 15, velocity: { min: 10, max: 15 } },
+            { name: 'watermelon_slice', emoji: '🍉', radius: 48, points: 10, velocity: { min: 12, max: 18 } },
+            { name: 'melon', emoji: '🍈', radius: 50, points: 9, velocity: { min: 11, max: 17 } },
+            { name: 'avocado', emoji: '🥑', radius: 40, points: 8, velocity: { min: 13, max: 19 } }
         ];
 
         // ==================== GAME STATE ====================
@@ -748,8 +755,6 @@
             particles = [];
             bladeTrail = [];
             slicedFruits = [];
-            fruitHalves = [];
-            juiceSplashes = [];
             lastSpawn = 0;
             gameStart = Date.now();
             
@@ -836,12 +841,12 @@
                 vx: Math.cos(angle) * velocity * 0.3,
                 vy: -velocity,
                 radius: type.radius,
-                color: type.color,
-                innerColor: type.innerColor,
+                emoji: type.emoji,
                 name: type.name,
                 points: type.points,
                 rotation: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.2,
+                scale: 1,
                 sliced: false,
                 isSpecial,
                 specialType
@@ -849,27 +854,45 @@
         }
 
         function createJuiceSplash(x, y, color) {
-            for (let i = 0; i < 20; i++) {
+            // Fruit juice particles
+            const colors = ['#FF6B35', '#FFA726', '#FFD54F', '#FF5722', '#FFC107'];
+            for (let i = 0; i < 30; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 3 + Math.random() * 8;
+                const speed = 4 + Math.random() * 12;
                 particles.push({
                     x, y,
                     vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 5,
-                    radius: 3 + Math.random() * 6,
-                    color,
+                    vy: Math.sin(angle) * speed - 8,
+                    radius: 4 + Math.random() * 10,
+                    color: colors[Math.floor(Math.random() * colors.length)],
                     life: 1,
-                    gravity: 0.3
+                    gravity: 0.4
                 });
             }
             
-            // Juice puddle
-            juiceSplashes.push({
+            // Juice drops
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 30,
+                    y: y + (Math.random() - 0.5) * 30,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: Math.random() * 2,
+                    radius: 2 + Math.random() * 4,
+                    color: '#FFEB3B',
+                    life: 0.8,
+                    gravity: 0.5
+                });
+            }
+            
+            // Slice flash effect
+            particles.push({
                 x, y,
-                radius: 10,
-                maxRadius: 40 + Math.random() * 30,
-                color,
-                life: 1
+                vx: 0, vy: 0,
+                radius: 50,
+                color: 'rgba(255,255,255,0.8)',
+                life: 0.3,
+                gravity: 0,
+                isFlash: true
             });
         }
 
@@ -878,27 +901,8 @@
             slicedFruits.push(fruit);
             stats.totalSliced++;
             
-            // Create halves
-            const perpAngle = sliceAngle + Math.PI / 2;
-            for (let i = 0; i < 2; i++) {
-                const dir = i === 0 ? 1 : -1;
-                fruitHalves.push({
-                    x: fruit.x,
-                    y: fruit.y,
-                    vx: fruit.vx + Math.cos(perpAngle) * dir * 3,
-                    vy: fruit.vy - 2,
-                    radius: fruit.radius,
-                    color: fruit.color,
-                    innerColor: fruit.innerColor,
-                    rotation: fruit.rotation,
-                    rotationSpeed: fruit.rotationSpeed + dir * 0.1,
-                    half: i,
-                    sliceAngle,
-                    life: 1
-                });
-            }
-            
-            createJuiceSplash(fruit.x, fruit.y, fruit.innerColor);
+            // Create juice particles
+            createJuiceSplash(fruit.x, fruit.y, '#FF6B35');
             
             // Score
             if (Date.now() - lastSliceTime < CONFIG.COMBO_TIMEOUT) {
@@ -1197,29 +1201,19 @@
                 p.x += p.vx;
                 p.y += p.vy;
                 p.vy += p.gravity || 0;
-                p.life -= 0.02;
+                p.vx *= 0.98;
+                if (p.isFlash) {
+                    p.life -= 0.1;
+                } else {
+                    p.life -= 0.015;
+                }
                 if (p.life <= 0) particles.splice(i, 1);
             }
             
-            // Update fruit halves
-            for (let i = fruitHalves.length - 1; i >= 0; i--) {
-                const half = fruitHalves[i];
-                half.vy += CONFIG.GRAVITY;
-                half.x += half.vx;
-                half.y += half.vy;
-                half.rotation += half.rotationSpeed;
-                half.life -= 0.01;
-                if (half.life <= 0 || half.y > canvas.height + 100) {
-                    fruitHalves.splice(i, 1);
-                }
-            }
-            
-            // Update juice splashes
-            for (let i = juiceSplashes.length - 1; i >= 0; i--) {
-                const splash = juiceSplashes[i];
-                splash.radius += (splash.maxRadius - splash.radius) * 0.1;
-                splash.life -= 0.015;
-                if (splash.life <= 0) juiceSplashes.splice(i, 1);
+            // Update fruit animation
+            for (let i = fruits.length - 1; i >= 0; i--) {
+                const fruit = fruits[i];
+                fruit.scale = 0.95 + Math.sin(Date.now() * 0.005 + i) * 0.05;
             }
             
             // Render
@@ -1243,14 +1237,6 @@
             // Draw clouds
             drawClouds();
             
-            // Draw juice splashes
-            juiceSplashes.forEach(splash => {
-                ctx.beginPath();
-                ctx.arc(splash.x, splash.y, splash.radius, 0, Math.PI * 2);
-                ctx.fillStyle = splash.color + Math.floor(splash.life * 50).toString(16).padStart(2, '0');
-                ctx.fill();
-            });
-            
             // Draw fruits
             fruits.forEach(fruit => {
                 if (!fruit.sliced) {
@@ -1258,26 +1244,33 @@
                 }
             });
             
-            // Draw fruit halves
-            fruitHalves.forEach(half => {
-                drawFruitHalf(half);
-            });
-            
             // Draw particles
             particles.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life;
-                ctx.fill();
-                ctx.globalAlpha = 1;
+                if (p.isFlash) {
+                    // Flash effect
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius * (1 + (1 - p.life) * 2), 0, Math.PI * 2);
+                    const flashGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+                    flashGrad.addColorStop(0, `rgba(255, 255, 255, ${p.life})`);
+                    flashGrad.addColorStop(1, `rgba(255, 200, 100, 0)`);
+                    ctx.fillStyle = flashGrad;
+                    ctx.fill();
+                } else {
+                    // Regular particle
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
             });
             
-            // Draw blade trail
+            // Draw realistic blade trail
             if (bladeTrail.length > 1) {
+                // Outer glow
                 ctx.beginPath();
                 ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
-                
                 for (let i = 1; i < bladeTrail.length; i++) {
                     const p = bladeTrail[i];
                     const prev = bladeTrail[i - 1];
@@ -1285,26 +1278,69 @@
                     const midY = (prev.y + p.y) / 2;
                     ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
                 }
-                
-                ctx.lineWidth = 8;
+                ctx.lineWidth = 35;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                
-                const trailGrad = ctx.createLinearGradient(
-                    bladeTrail[0].x, bladeTrail[0].y,
-                    bladeTrail[bladeTrail.length - 1].x, bladeTrail[bladeTrail.length - 1].y
-                );
-                trailGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-                trailGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
-                trailGrad.addColorStop(1, 'rgba(255, 255, 255, 1)');
-                
-                ctx.strokeStyle = trailGrad;
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.3)';
+                ctx.filter = 'blur(8px)';
                 ctx.stroke();
+                ctx.filter = 'none';
                 
-                // Glow effect
+                // Middle glow (blue steel)
+                ctx.beginPath();
+                ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
+                for (let i = 1; i < bladeTrail.length; i++) {
+                    const p = bladeTrail[i];
+                    const prev = bladeTrail[i - 1];
+                    const midX = (prev.x + p.x) / 2;
+                    const midY = (prev.y + p.y) / 2;
+                    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+                }
                 ctx.lineWidth = 15;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.strokeStyle = 'rgba(150, 200, 255, 0.6)';
+                ctx.filter = 'blur(4px)';
                 ctx.stroke();
+                ctx.filter = 'none';
+                
+                // Core blade (bright white-blue)
+                ctx.beginPath();
+                ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
+                for (let i = 1; i < bladeTrail.length; i++) {
+                    const p = bladeTrail[i];
+                    const prev = bladeTrail[i - 1];
+                    const midX = (prev.x + p.x) / 2;
+                    const midY = (prev.y + p.y) / 2;
+                    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+                }
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.stroke();
+                
+                // Edge highlight
+                ctx.beginPath();
+                ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
+                for (let i = 1; i < bladeTrail.length; i++) {
+                    const p = bladeTrail[i];
+                    const prev = bladeTrail[i - 1];
+                    const midX = (prev.x + p.x) / 2;
+                    const midY = (prev.y + p.y) / 2;
+                    ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+                }
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(200, 230, 255, 1)';
+                ctx.stroke();
+                
+                // Spark particles along blade
+                if (isSlicing && bladeTrail.length > 3) {
+                    for (let i = 1; i < bladeTrail.length - 1; i += 2) {
+                        const p = bladeTrail[i];
+                        const spark = 3 + Math.random() * 4;
+                        ctx.beginPath();
+                        ctx.arc(p.x + (Math.random() - 0.5) * 10, p.y + (Math.random() - 0.5) * 10, spark, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 255, 200, ${Math.random() * 0.8 + 0.2})`;
+                        ctx.fill();
+                    }
+                }
             }
         }
 
@@ -1332,118 +1368,27 @@
             ctx.save();
             ctx.translate(fruit.x, fruit.y);
             ctx.rotate(fruit.rotation);
+            ctx.scale(fruit.scale || 1, fruit.scale || 1);
             
             // Shadow
-            ctx.beginPath();
-            ctx.arc(3, 3, fruit.radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.fill();
+            ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 6;
+            ctx.shadowOffsetY = 6;
             
-            // Main fruit body with gradient
-            const grad = ctx.createRadialGradient(
-                -fruit.radius * 0.3, -fruit.radius * 0.3, 0,
-                0, 0, fruit.radius
-            );
-            grad.addColorStop(0, lightenColor(fruit.color, 30));
-            grad.addColorStop(0.7, fruit.color);
-            grad.addColorStop(1, darkenColor(fruit.color, 20));
+            // Draw emoji as fruit image
+            const fontSize = fruit.radius * 1.8;
+            ctx.font = `${fontSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
             
-            ctx.beginPath();
-            ctx.arc(0, 0, fruit.radius, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
-            ctx.fill();
+            // Glow effect
+            ctx.shadowColor = 'rgba(255,255,255,0.6)';
+            ctx.shadowBlur = 15;
             
-            // Highlight
-            ctx.beginPath();
-            ctx.arc(-fruit.radius * 0.3, -fruit.radius * 0.3, fruit.radius * 0.25, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.fill();
-            
-            // Special items
-            if (fruit.isSpecial) {
-                if (fruit.specialType === 'bomb') {
-                    // Bomb icon
-                    ctx.font = `${fruit.radius}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('💣', 0, 0);
-                } else if (fruit.specialType === 'star') {
-                    // Star icon
-                    ctx.font = `${fruit.radius}px Arial`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('⭐', 0, 0);
-                }
-            }
+            ctx.fillText(fruit.emoji, 0, 0);
             
             ctx.restore();
-        }
-
-        function drawFruitHalf(half) {
-            ctx.save();
-            ctx.translate(half.x, half.y);
-            ctx.rotate(half.rotation);
-            ctx.globalAlpha = half.life;
-            
-            ctx.beginPath();
-            if (half.half === 0) {
-                ctx.arc(0, 0, half.radius, -Math.PI / 2, Math.PI / 2);
-            } else {
-                ctx.arc(0, 0, half.radius, Math.PI / 2, -Math.PI / 2);
-            }
-            ctx.closePath();
-            
-            // Outer skin
-            ctx.fillStyle = half.color;
-            ctx.fill();
-            
-            // Inner flesh
-            ctx.beginPath();
-            if (half.half === 0) {
-                ctx.arc(0, 0, half.radius * 0.85, -Math.PI / 2, Math.PI / 2);
-            } else {
-                ctx.arc(0, 0, half.radius * 0.85, Math.PI / 2, -Math.PI / 2);
-            }
-            ctx.closePath();
-            ctx.fillStyle = half.innerColor;
-            ctx.fill();
-            
-            // Seeds/details for watermelon
-            if (half.name === 'watermelon') {
-                ctx.fillStyle = '#333';
-                for (let i = 0; i < 5; i++) {
-                    const angle = (half.half === 0 ? 0 : Math.PI) + (Math.random() - 0.5) * Math.PI * 0.6;
-                    const dist = Math.random() * half.radius * 0.5;
-                    ctx.beginPath();
-                    ctx.ellipse(
-                        Math.cos(angle) * dist,
-                        Math.sin(angle) * dist,
-                        3, 5, angle, 0, Math.PI * 2
-                    );
-                    ctx.fill();
-                }
-            }
-            
-            ctx.globalAlpha = 1;
-            ctx.restore();
-        }
-
-        function lightenColor(color, percent) {
-            const num = parseInt(color.replace('#', ''), 16);
-            const amt = Math.round(2.55 * percent);
-            const R = Math.min(255, (num >> 16) + amt);
-            const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
-            const B = Math.min(255, (num & 0x0000FF) + amt);
-            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
-        }
-
-        function darkenColor(color, percent) {
-            const num = parseInt(color.replace('#', ''), 16);
-            const amt = Math.round(2.55 * percent);
-            const R = Math.max(0, (num >> 16) - amt);
-            const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
-            const B = Math.max(0, (num & 0x0000FF) - amt);
-            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
         }
 
         // ==================== START ====================
