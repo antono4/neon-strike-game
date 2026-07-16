@@ -29,8 +29,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            cursor: crosshair;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M4 4 L28 28 M24 4 L28 8 L20 16 M8 24 L4 28 L8 28 L12 24" stroke="%23FFD700" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="6" cy="6" r="2" fill="%23FFD700"/></svg>') 4 4, crosshair;
             z-index: 1;
+        }
+        
+        #gameCanvas.menu-cursor {
+            cursor: default;
         }
 
         /* UI Overlay */
@@ -645,6 +649,9 @@
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
             
+            // Set default cursor for menu
+            canvas.classList.add('menu-cursor');
+            
             // Load background image
             backgroundImage.onload = function() {
                 backgroundLoaded = true;
@@ -779,6 +786,9 @@
             document.getElementById('settingsScreen').classList.add('hidden');
             document.getElementById('hud').style.display = 'block';
             
+            // Change to sword cursor during gameplay
+            canvas.classList.remove('menu-cursor');
+            
             document.getElementById('timerContainer').classList.toggle('visible', mode === 'time');
             
             updateHUD();
@@ -807,6 +817,9 @@
             document.getElementById('gameoverAccuracy').textContent = lives > 0 ? '100%' : Math.round((slicedFruits.length / (slicedFruits.length + CONFIG.INITIAL_LIVES - lives)) * 100) + '%';
             document.getElementById('newRecord').classList.toggle('hidden', !isNewRecord);
             
+            // Change to default cursor when game ends
+            canvas.classList.add('menu-cursor');
+            
             setTimeout(() => {
                 document.getElementById('gameOverScreen').classList.remove('hidden');
             }, 500);
@@ -817,6 +830,10 @@
             document.getElementById('gameOverScreen').classList.add('hidden');
             document.getElementById('menuScreen').classList.remove('hidden');
             document.getElementById('hud').style.display = 'none';
+            
+            // Change to default cursor in menu
+            canvas.classList.add('menu-cursor');
+            
             updateHighScoreDisplay();
         }
 
