@@ -1226,16 +1226,8 @@
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw background gradient
-            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            bgGrad.addColorStop(0, '#87CEEB');
-            bgGrad.addColorStop(0.5, '#FFA07A');
-            bgGrad.addColorStop(1, '#FF6B6B');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw clouds
-            drawClouds();
+            // Draw realistic background
+            drawRealisticBackground();
             
             // Draw fruits
             fruits.forEach(fruit => {
@@ -1344,24 +1336,234 @@
             }
         }
 
-        function drawClouds() {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            const time = Date.now() * 0.0001;
+        function drawRealisticBackground() {
+            const time = Date.now();
+            const h = canvas.height;
+            const w = canvas.width;
             
-            for (let i = 0; i < 5; i++) {
-                const x = ((time + i * 0.5) % 2) * canvas.width;
-                const y = 50 + i * 40;
-                drawCloud(x, y, 30 + i * 10);
-            }
+            // Sky gradient (sunset/golden hour)
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+            skyGrad.addColorStop(0, '#1a1a3e'); // Dark blue top
+            skyGrad.addColorStop(0.2, '#4a3f6b'); // Purple
+            skyGrad.addColorStop(0.4, '#e85d75'); // Pink
+            skyGrad.addColorStop(0.5, '#ff8c42'); // Orange
+            skyGrad.addColorStop(0.6, '#ffc857'); // Golden yellow
+            skyGrad.addColorStop(0.75, '#ffd89b'); // Light gold
+            skyGrad.addColorStop(1, '#fff5e6'); // Cream at horizon
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h);
+            
+            // Sun
+            const sunX = w * 0.7;
+            const sunY = h * 0.55;
+            const sunRadius = Math.min(w, h) * 0.12;
+            
+            // Sun glow
+            const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 3);
+            sunGlow.addColorStop(0, 'rgba(255, 200, 100, 0.8)');
+            sunGlow.addColorStop(0.3, 'rgba(255, 150, 50, 0.4)');
+            sunGlow.addColorStop(0.6, 'rgba(255, 100, 50, 0.1)');
+            sunGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = sunGlow;
+            ctx.fillRect(0, 0, w, h);
+            
+            // Sun body
+            const sunBody = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius);
+            sunBody.addColorStop(0, '#fffef0');
+            sunBody.addColorStop(0.7, '#ffdd66');
+            sunBody.addColorStop(1, '#ffaa33');
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+            ctx.fillStyle = sunBody;
+            ctx.fill();
+            
+            // Clouds (more realistic)
+            drawRealisticClouds(time);
+            
+            // Far mountains (purple/misty)
+            drawMountains(h * 0.5, h * 0.7, '#3d2852', '#2a1a3d', 0.4);
+            
+            // Mid mountains (darker)
+            drawMountains(h * 0.6, h * 0.8, '#1a1025', '#0d0812', 0.6);
+            
+            // Near hills (dark silhouette)
+            drawHills(h * 0.75, h, '#0a0510', '#050208', 0.8);
+            
+            // Ground/grass
+            const groundGrad = ctx.createLinearGradient(0, h * 0.85, 0, h);
+            groundGrad.addColorStop(0, '#1a0f1a');
+            groundGrad.addColorStop(1, '#0a0508');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, h * 0.85, w, h * 0.15);
+            
+            // Grass tufts
+            drawGrass(w, h);
+            
+            // Birds
+            drawBirds(time, w, h);
         }
 
-        function drawCloud(x, y, size) {
+        function drawRealisticClouds(time) {
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            // Cloud configurations
+            const clouds = [
+                { x: w * 0.1, y: h * 0.15, scale: 1.2, speed: 0.00002 },
+                { x: w * 0.4, y: h * 0.08, scale: 0.8, speed: 0.000025 },
+                { x: w * 0.7, y: h * 0.18, scale: 1.0, speed: 0.000018 },
+                { x: w * 0.25, y: h * 0.25, scale: 0.6, speed: 0.00003 },
+                { x: w * 0.85, y: h * 0.12, scale: 0.9, speed: 0.000022 },
+            ];
+            
+            clouds.forEach(cloud => {
+                const cx = ((time * cloud.speed) % 1.5) * w - w * 0.2;
+                const cy = cloud.y;
+                const s = cloud.scale * 50;
+                
+                // Cloud shadow
+                ctx.fillStyle = 'rgba(200, 150, 180, 0.3)';
+                drawCloudShape(cx, cy + 10 * cloud.scale, s);
+                
+                // Cloud body (pinks/oranges from sunset)
+                const cloudGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 2);
+                cloudGrad.addColorStop(0, 'rgba(255, 220, 200, 0.9)');
+                cloudGrad.addColorStop(0.5, 'rgba(255, 180, 150, 0.6)');
+                cloudGrad.addColorStop(1, 'rgba(255, 150, 120, 0)');
+                ctx.fillStyle = cloudGrad;
+                drawCloudShape(cx, cy, s);
+            });
+        }
+
+        function drawCloudShape(x, y, size) {
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
             ctx.arc(x + size * 0.8, y - size * 0.2, size * 0.7, 0, Math.PI * 2);
-            ctx.arc(x + size * 1.5, y, size * 0.8, 0, Math.PI * 2);
-            ctx.arc(x - size * 0.6, y + size * 0.1, size * 0.6, 0, Math.PI * 2);
+            ctx.arc(x + size * 1.4, y, size * 0.6, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.3, y - size * 0.4, size * 0.5, 0, Math.PI * 2);
+            ctx.arc(x - size * 0.4, y + size * 0.1, size * 0.5, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        function drawMountains(baseY, topY, lightColor, darkColor, opacity) {
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.fillStyle = darkColor;
+            ctx.globalAlpha = opacity;
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            
+            // Generate mountain peaks
+            const peaks = 8;
+            for (let i = 0; i <= peaks; i++) {
+                const px = (i / peaks) * w;
+                const peakHeight = baseY - Math.sin(i * 1.5) * (baseY - topY) * 0.8 - Math.random() * 20;
+                if (i === 0 || i === peaks) {
+                    ctx.lineTo(px, peakHeight);
+                } else {
+                    // Random mountain variation
+                    const variation = Math.sin(i * 2.3) * 0.3 + Math.cos(i * 1.7) * 0.2;
+                    const midY = (peakHeight + baseY) / 2 + variation * (baseY - topY);
+                    ctx.quadraticCurveTo(px - w / peaks / 2, midY, px, peakHeight);
+                }
+            }
+            
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            // Snow caps
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 1; i < peaks; i++) {
+                const px = (i / peaks) * w;
+                const peakHeight = baseY - Math.sin(i * 1.5) * (baseY - topY) * 0.8;
+                if (peakHeight < topY + (baseY - topY) * 0.3) {
+                    ctx.beginPath();
+                    ctx.moveTo(px - 15, peakHeight);
+                    ctx.lineTo(px, peakHeight - 25);
+                    ctx.lineTo(px + 15, peakHeight);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawHills(baseY, bottomY, lightColor, darkColor, opacity) {
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.fillStyle = darkColor;
+            ctx.globalAlpha = opacity;
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            
+            // Rolling hills
+            for (let x = 0; x <= w; x += 5) {
+                const y = baseY + Math.sin(x * 0.01) * 30 + Math.sin(x * 0.02) * 15 + Math.sin(x * 0.005) * 40;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        function drawGrass(w, h) {
+            const grassY = h * 0.85;
+            
+            ctx.strokeStyle = '#1a0f15';
+            ctx.lineWidth = 2;
+            
+            for (let x = 0; x < w; x += 15) {
+                const baseHeight = 10 + Math.random() * 15;
+                const sway = Math.sin(Date.now() * 0.002 + x * 0.1) * 5;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, h);
+                ctx.quadraticCurveTo(x + sway, grassY + baseHeight / 2, x + sway * 1.5, grassY + baseHeight);
+                ctx.stroke();
+                
+                // Multiple grass blades
+                if (Math.random() > 0.5) {
+                    ctx.beginPath();
+                    ctx.moveTo(x + 5, h);
+                    ctx.quadraticCurveTo(x + 5 + sway * 0.8, grassY + baseHeight * 0.4, x + 5 + sway, grassY + baseHeight * 0.8);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawBirds(time, w, h) {
+            const birdCount = 5;
+            ctx.strokeStyle = '#2a1a25';
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i < birdCount; i++) {
+                const baseX = (w * 0.2) + (i * w * 0.15);
+                const baseY = h * 0.2 + Math.sin(i * 2) * h * 0.05;
+                
+                // Bird flies in a pattern
+                const offsetX = Math.sin(time * 0.001 + i * 1.5) * 30;
+                const offsetY = Math.cos(time * 0.0015 + i * 2) * 15;
+                const x = baseX + offsetX;
+                const y = baseY + offsetY;
+                
+                // Wing flap animation
+                const wingAngle = Math.sin(time * 0.01 + i * 3) * 0.3;
+                
+                // Bird shape (V shape)
+                ctx.beginPath();
+                ctx.moveTo(x - 8, y + wingAngle * 5);
+                ctx.quadraticCurveTo(x, y - 3, x + 8, y + wingAngle * 5);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x - 8, y + wingAngle * 5);
+                ctx.quadraticCurveTo(x, y + 3, x + 8, y + wingAngle * 5);
+                ctx.stroke();
+            }
         }
 
         function drawFruit(fruit) {
